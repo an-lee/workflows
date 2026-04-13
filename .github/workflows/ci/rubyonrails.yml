@@ -92,7 +92,7 @@ jobs:
 
       - name: Lint Ruby files
         if: inputs.enable-linting != false
-        run: bundle exec rubocop --parallel --config ./.rubocop.yml
+        run: bundle exec rubocop --parallel
 
       # Database setup
       - name: Wait for postgres

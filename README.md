@@ -25,12 +25,43 @@ jobs:
 | Path | Description |
 |---|---|
 | `.github/workflows/ci/node.yml` | Node.js CI — install, cache, test |
+| `.github/workflows/ci/bun.yml` | Bun CI — mise setup, install, test |
 | `.github/workflows/ci/python.yml` | Python CI — install, cache, test |
 | `.github/workflows/ci/rubyonrails.yml` | Ruby on Rails CI — install, lint, audit, test |
 | `.github/workflows/cd/docker-build-push.yml` | Build and push Docker image |
 | `.github/workflows/cd/release.yml` | GitHub Releases with changelog |
 | `.github/workflows/security/codeql.yml` | CodeQL security analysis |
 | `.github/workflows/security/dependency-review.yml` | Dependency review |
+
+#### Bun CI — example usage
+
+Minimal (all defaults — self-hosted runner, `bun test`):
+
+```yaml
+# .github/workflows/ci.yml in your repo
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    uses: an-lee/workflows/.github/workflows/ci/bun.yml@v1
+```
+
+With custom options:
+
+```yaml
+jobs:
+  test:
+    uses: an-lee/workflows/.github/workflows/ci/bun.yml@v1
+    with:
+      runs-on: '["ubuntu-latest"]'        # switch to GitHub-hosted runner
+      compile: 'bun run build'            # default is 'bun run compile'
+      run-tests: 'bun run test:ci'        # default is 'bun test'
+```
 
 #### Ruby on Rails CI — example usage
 

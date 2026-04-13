@@ -1,0 +1,46 @@
+name: Bun CI
+
+on:
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      runs-on:
+        description: 'Runner labels as a JSON array string'
+        type: string
+        default: '["self-hosted", "Linux", "ci"]'
+      compile:
+        description: 'Command to compile the project'
+        type: string
+        default: 'bun run compile'
+      run-tests:
+        description: 'Command to run tests'
+        type: string
+        default: 'bun test'
+
+jobs:
+  test:
+    name: Bun test
+    runs-on: ${{ fromJSON(inputs.runs-on || '["self-hosted", "Linux", "ci"]') }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup mise
+        uses: jdx/mise-action@v3
+
+      - name: Cache bun modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Compile
+        run: ${{ inputs.compile || 'bun run compile' }}
+
+      - name: Run tests
+        run: ${{ inputs.run-tests || 'bun test' }}
