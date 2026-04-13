@@ -1,0 +1,18 @@
+name: CodeQL Security Analysis
+
+on:
+  workflow_call:
+
+jobs:
+  analyze:
+    name: CodeQL Analyze
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@39d58a4b3aa8b9a64b7e37192e5a6f1a2b9e5c4d
+        with:
+          languages: ['javascript', 'typescript', 'python']
+      - uses: github/codeql-action/analyze@39d58a4b3aa8b9a64b7e37192e5a6f1a2b9e5c4d
