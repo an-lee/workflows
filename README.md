@@ -26,10 +26,45 @@ jobs:
 |---|---|
 | `.github/workflows/ci/node.yml` | Node.js CI — install, cache, test |
 | `.github/workflows/ci/python.yml` | Python CI — install, cache, test |
+| `.github/workflows/ci/rubyonrails.yml` | Ruby on Rails CI — install, lint, audit, test |
 | `.github/workflows/cd/docker-build-push.yml` | Build and push Docker image |
 | `.github/workflows/cd/release.yml` | GitHub Releases with changelog |
 | `.github/workflows/security/codeql.yml` | CodeQL security analysis |
 | `.github/workflows/security/dependency-review.yml` | Dependency review |
+
+#### Ruby on Rails CI — example usage
+
+Minimal (all defaults — self-hosted runner, postgres DB named after the repo):
+
+```yaml
+# .github/workflows/ci.yml in your Rails repo
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  rails:
+    uses: an-lee/workflows/.github/workflows/ci/rubyonrails.yml@v1
+```
+
+With custom options:
+
+```yaml
+jobs:
+  rails:
+    uses: an-lee/workflows/.github/workflows/ci/rubyonrails.yml@v1
+    with:
+      runs-on: '["self-hosted", "Linux", "ci"]' # default; pass '["ubuntu-latest"]' for GitHub-hosted
+      database: postgres          # or 'none' to skip all DB steps
+      database-name: myapp        # DATABASE_URL → .../myapp_test (defaults to repo name)
+      rails-env: test             # default
+      run-tests: bin/rspec        # default is 'bin/rails test'
+      enable-linting: true        # set false if rubocop runs in a separate job
+      enable-security-audit: false
+```
 
 ---
 

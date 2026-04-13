@@ -1,0 +1,119 @@
+# This workflow uses actions that are not certified by GitHub.  They are
+# provided by a third-party and are governed by separate terms of service,
+# privacy policy, and support documentation.
+#
+# This workflow will install a prebuilt Ruby version, install dependencies, and
+# run tests and linters.
+name: "Ruby on Rails CI"
+on:
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      runs-on:
+        description: 'Runner labels as a JSON array string'
+        type: string
+        default: '["self-hosted", "Linux", "ci"]'
+      database:
+        description: 'Database type to use (postgres, none)'
+        type: string
+        default: 'postgres'
+      database-name:
+        description: 'Database name prefix; if empty, uses the repository name'
+        type: string
+        default: ''
+      rails-env:
+        description: 'Rails environment'
+        type: string
+        default: 'test'
+      run-tests:
+        description: 'Command to run tests'
+        type: string
+        default: 'bin/rails test'
+      enable-linting:
+        description: 'Run linting checks (rubocop)'
+        type: boolean
+        default: true
+      enable-security-audit:
+        description: 'Run security audits (bundler-audit, brakeman)'
+        type: boolean
+        default: true
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  RAILS_ENV: ${{ inputs.rails-env || 'test' }}
+  BUNDLE_PATH: vendor/bundle
+  BUN_INSTALL__FLAGS: "--frozen-lockfile"
+  DATABASE_URL: ${{ (inputs.database == 'postgres' || inputs.database == '') && format('postgres://postgres:postgres@localhost:5432/{0}_test', inputs.database-name != '' && inputs.database-name || github.event.repository.name) || '' }}
+
+jobs:
+  quality:
+    runs-on: ${{ fromJSON(inputs.runs-on || '["self-hosted", "Linux", "ci"]') }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup mise
+        uses: jdx/mise-action@v3
+
+      - name: Cache bundler gems
+        uses: actions/cache@v4
+        with:
+          path: vendor/bundle
+          key: ${{ runner.os }}-bundler-${{ hashFiles('Gemfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bundler-
+
+      - name: Cache bun modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      # Install dependencies
+      - name: Install ruby gems
+        run: bundle install --jobs 4 --retry 3
+
+      - name: Install node modules
+        run: bun install
+
+      # Lint checks
+      - name: Security audit dependencies
+        if: inputs.enable-security-audit != false
+        run: bundle exec bundler-audit --update
+
+      - name: Security audit application code
+        if: inputs.enable-security-audit != false
+        run: bundle exec brakeman -q -w2
+
+      - name: Lint Ruby files
+        if: inputs.enable-linting != false
+        run: bundle exec rubocop --parallel --config ./.rubocop.yml
+
+      # Database setup
+      - name: Wait for postgres
+        if: inputs.database != 'none'
+        run: |
+          for i in {1..30}; do
+            if PGPASSWORD=postgres psql -h localhost -U postgres -c '\q' 2>/dev/null; then
+              echo "Postgres is ready"
+              break
+            fi
+            echo "Waiting for postgres to be ready..."
+            sleep 1
+          done
+
+      - name: Set up database schema
+        if: inputs.database != 'none'
+        run: bin/rails db:prepare
+
+      - name: Run Zeitwerk
+        run: bin/rails zeitwerk:check
+
+      # Tests
+      - name: Run tests
+        run: ${{ inputs.run-tests || 'bin/rails test' }}
