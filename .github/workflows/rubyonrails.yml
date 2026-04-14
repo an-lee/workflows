@@ -44,7 +44,8 @@ concurrency:
 
 env:
   RAILS_ENV: ${{ inputs.rails-env || 'test' }}
-  BUNDLE_PATH: vendor/bundle
+  BUNDLE_PATH: /opt/runner-cache/bundler
+  BUN_INSTALL_CACHE_DIR: /opt/runner-cache/bun
   BUN_INSTALL__FLAGS: "--frozen-lockfile"
   DATABASE_URL: ${{ (inputs.database == 'postgres' || inputs.database == '') && format('postgres://postgres:postgres@localhost:5432/{0}_test', inputs.database-name != '' && inputs.database-name || github.event.repository.name) || '' }}
 
@@ -57,22 +58,6 @@ jobs:
 
       - name: Setup mise
         uses: jdx/mise-action@v3
-
-      - name: Cache bundler gems
-        uses: actions/cache@v4
-        with:
-          path: vendor/bundle
-          key: ${{ runner.os }}-bundler-${{ hashFiles('Gemfile.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-bundler-
-
-      - name: Cache bun modules
-        uses: actions/cache@v4
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-
 
       - name: Install ruby gems
         run: bundle install --jobs 4 --retry 3
@@ -91,14 +76,6 @@ jobs:
       - name: Setup mise
         uses: jdx/mise-action@v3
 
-      - name: Cache bundler gems
-        uses: actions/cache@v4
-        with:
-          path: vendor/bundle
-          key: ${{ runner.os }}-bundler-${{ hashFiles('Gemfile.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-bundler-
-
       - name: Lint Ruby files
         run: bundle exec rubocop --parallel
 
@@ -112,14 +89,6 @@ jobs:
 
       - name: Setup mise
         uses: jdx/mise-action@v3
-
-      - name: Cache bundler gems
-        uses: actions/cache@v4
-        with:
-          path: vendor/bundle
-          key: ${{ runner.os }}-bundler-${{ hashFiles('Gemfile.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-bundler-
 
       - name: Security audit dependencies
         run: bundle exec bundler-audit --update
@@ -136,22 +105,6 @@ jobs:
 
       - name: Setup mise
         uses: jdx/mise-action@v3
-
-      - name: Cache bundler gems
-        uses: actions/cache@v4
-        with:
-          path: vendor/bundle
-          key: ${{ runner.os }}-bundler-${{ hashFiles('Gemfile.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-bundler-
-
-      - name: Cache bun modules
-        uses: actions/cache@v4
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-
 
       - name: Wait for postgres
         if: inputs.database != 'none'
